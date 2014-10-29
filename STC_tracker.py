@@ -4,11 +4,7 @@ import numpy as np
 import os
 import sys
 from scitools import numpyutils  as sn
-from scipy.io import loadmat
 
-mat = loadmat('stc_before_for.mat')
-
-#def get_initbox(video_name)
 
 if __name__ == '__main__':
 
@@ -35,18 +31,32 @@ if __name__ == '__main__':
     # Pre-computed confidence map.
     alapha = 2.25
 
-    rs, cs = sn.ndgrid(np.array(range(sz[0])) +1 - np.floor(sz[0]/2), np.array(range(sz[1])) +1  - np.floor(sz[1]/2))
+    rs, cs = sn.ndgrid(np.array(range(sz[0])) + 1 - sz[0]/2,
+                       np.array(range(sz[1])) + 1  - sz[1]/2)
 
     dist = rs**2 + cs**2
 
-    import ipdb;ipdb.set_trace()
+    conf = np.exp(-0.5 * np.sqrt(dist) / alapha)
 
-    #rs, cs = sn.ndgrid()
-    #dist = rs^2 + cs^2
-    conf = math.exp(-0.5 / (alapha) * math.sqrt(642))
+    # normalization
+    conf =conf / conf.sum(axis=0).sum()
 
-    # Confidence map normalization
-    #conf =  
+    # frequency
+    conff = np.fft.fft2(conf)
+
+    # store pre-computed weight window
+    hamming_window = np.outer(np.hamming(sz[0]),
+                              np.hanning(sz[1]).T)
+
+    # initial sigma for the weight function
+    sigma = np.mean(target_sz)
+
+
+    # use Hamming window to reduce frequency effect of image boundary
+    window = hamming_window * np.exp(-0.5 * dist / sigma**2)
+
+    # a normalized window
+    window = window / window.sum(axis=0).sum()
 
     # Loop reading frames
     for frame in frames_list:
