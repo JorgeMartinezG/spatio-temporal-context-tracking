@@ -1,9 +1,30 @@
+import cv
 import cv2
 import math
 import numpy as np
 import os
 import sys
 from scitools import numpyutils  as sn
+import ipdb
+
+def get_context(im, pos, sz, window):
+    # Get and process context region.
+    xs = pos[1] + np.array(range(sz[1])) + 1 - (sz[1]/2)
+    ys = pos[0] + np.array(range(sz[0])) + 1 - (sz[0]/2)
+
+    # Check for out-of-bounds coordinates, and set them to the values
+    # at the borders.
+    xs[xs < 1] = 1
+    ys[ys < 1] = 1
+    xs[xs > im.shape[1]] = im.shape[1]
+    ys[ys > im.shape[0]] = im.shape[0]
+
+    # Extract image in context region.
+    out = im[ys[0]:ys[-1] + 1, xs[0]:xs[-1] + 1].astype('d')
+    out = out - np.mean(out)
+    out = window * out
+
+    return out
 
 
 if __name__ == '__main__':
@@ -17,7 +38,8 @@ if __name__ == '__main__':
     initstate = [161, 65, 75, 95]
 
     # Center target.
-    pos = [initstate[1] + initstate[3]/2, initstate[0] + initstate[2]/2]
+    pos = np.array([initstate[1] + initstate[3]/2,
+                    initstate[0] + initstate[2]/2])
     # Initial target size.
     target_sz = np.array([initstate[3], initstate[2]])
     
@@ -25,6 +47,7 @@ if __name__ == '__main__':
     padding = 1                               # Extra area.
     rho = 0.075                                 # Learning parameter rho.
     sz = target_sz * (1 + padding)             # Context region size.
+
 
     # Parameters of scale update - scale ratio, lambda, average frames.
     scale, lambada, num = 1, 0.25, 5
@@ -59,8 +82,38 @@ if __name__ == '__main__':
     window = window / window.sum(axis=0).sum()
 
     # Loop reading frames
-    for frame in frames_list:
-        img = cv2.imread(os.path.join(dataset_folder, video_name, 'img', frame))
+    for f, frame in enumerate(frames_list):
+        sigma = sigma * scale
+        window = hamming_window * np.exp(-0.5 * dist / sigma**2)
+        window = window / window.sum(axis=0).sum()
+        # Image read.
+        img = cv2.imread(os.path.join(dataset_folder, video_name,
+                                      'img', frame))
+        if img.shape[2] == 3:
+            im = cv2.cvtColor(img, cv.CV_BGR2GRAY)
+
+        context_prior = get_context(im, pos, sz, window)
+
+        # Frame loop should be here...
+
+        # Update the spatial context model h^{sc} in Eq.(9)
+        context_prior = get_context(im, pos, sz, window)
+        hscf = conff / np.fft.fft2(context_prior)
+        if f == 0:
+            # First frame, initialize the spatio-temporal context model.
+            Hstcf = hscf
+        else:
+            # Update the spatio-temporal context model H^{stc} by Eq. (12)
+            Hstcf = (1 - rho) * Hstcf + rho * hscf
+
+        # Visualization.
+        target_sz = target_sz[[1, 0]] * scale
+        rect_position = np.hstack([pos[[1, 0]] - target_sz/2,
+                                  target_sz])
+        init_point = tuple(rect_position[[0, 1]])
+        end_point = tuple([rect_position[0] + rect_position[2],
+                          rect_position[1] + rect_position[3]])
+        cv2.rectangle(img, init_point, end_point, (0, 255, 255), 2)
         cv2.imshow('image', img)
         key = cv2.waitKey(30)
     
