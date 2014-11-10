@@ -5,7 +5,6 @@ import numpy as np
 import os
 import sys
 from scitools import numpyutils  as sn
-import ipdb
 
 def get_context(im, pos, sz, window):
     # Get and process context region.
@@ -81,6 +80,8 @@ if __name__ == '__main__':
     # a normalized window
     window = window / window.sum(axis=0).sum()
 
+    maxconf = []
+
     # Loop reading frames
     for f, frame in enumerate(frames_list):
         sigma = sigma * scale
@@ -95,10 +96,32 @@ if __name__ == '__main__':
         context_prior = get_context(im, pos, sz, window)
 
         # Frame loop should be here...
+        if f > 0:
+            #calculate response of the confidence map at all locations
+            confmap = np.fft.ifft2(Hstcf * np.fft.fft2(context_prior)).real
+            # target location is at the maximum response
+            [row, ], [col, ] = np.where(confmap == confmap.max())
+            pos = pos - sz / 2 + [row, col]
 
+            context_prior = get_context(im, pos, sz, window)
+            
+            conftmp = np.fft.ifft2(Hstcf * np.fft.fft2(context_prior)).real
+            maxconf.append(conftmp.max())
+
+            # update scale by Eq.(15)
+            if f % (num + 5) == 0:
+                scale_curr = 0
+
+                for kk in range(num):
+                    scale_curr = scale_curr + np.sqrt(maxconf[f - kk - 1] / maxconf[f - kk - 2])
+
+                # update scale
+                scale = (1 - lambada) * scale + lambada * (scale_curr / num )
+            
         # Update the spatial context model h^{sc} in Eq.(9)
         context_prior = get_context(im, pos, sz, window)
         hscf = conff / np.fft.fft2(context_prior)
+
         if f == 0:
             # First frame, initialize the spatio-temporal context model.
             Hstcf = hscf
@@ -108,8 +131,10 @@ if __name__ == '__main__':
 
         # Visualization.
         target_sz = target_sz[[1, 0]] * scale
+
         rect_position = np.hstack([pos[[1, 0]] - target_sz/2,
-                                  target_sz])
+                                  target_sz]).astype(int)
+
         init_point = tuple(rect_position[[0, 1]])
         end_point = tuple([rect_position[0] + rect_position[2],
                           rect_position[1] + rect_position[3]])
