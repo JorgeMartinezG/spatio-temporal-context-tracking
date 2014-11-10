@@ -13,13 +13,23 @@ def get_context(im, pos, sz, window):
 
     # Check for out-of-bounds coordinates, and set them to the values
     # at the borders.
-    xs[xs < 1] = 1
-    ys[ys < 1] = 1
-    xs[xs > im.shape[1]] = im.shape[1]
-    ys[ys > im.shape[0]] = im.shape[0]
+    if xs[0] < 0:
+        xs = xs - xs[0]
+
+    if ys[0] < 0:
+        ys = ys - ys[0]
+
+    if ys[-1] > im.shape[0]:
+        ys = ys - ys[-1] + im.shape[0]
+
+    if xs[-1] > im.shape[1]:
+        xs = xs - xs[-1] + im.shape[1]
+
+    slicey = slice(ys[0] ,ys[-1] + 1)
+    slicex = slice(xs[0], xs[-1] + 1)
 
     # Extract image in context region.
-    out = im[ys[0]:ys[-1] + 1, xs[0]:xs[-1] + 1].astype('d')
+    out = im[slicey, slicex].astype('d')
     out = out - np.mean(out)
     out = window * out
 
@@ -40,7 +50,7 @@ if __name__ == '__main__':
     pos = np.array([initstate[1] + initstate[3]/2,
                     initstate[0] + initstate[2]/2])
     # Initial target size.
-    target_sz = np.array([initstate[3], initstate[2]])
+    target_sz = np.array([initstate[2], initstate[3]])
     
     # Parameters according to the paper.
     padding = 1                               # Extra area.
@@ -130,7 +140,7 @@ if __name__ == '__main__':
             Hstcf = (1 - rho) * Hstcf + rho * hscf
 
         # Visualization.
-        target_sz = target_sz[[1, 0]] * scale
+        target_sz = target_sz * scale
 
         rect_position = np.hstack([pos[[1, 0]] - target_sz/2,
                                   target_sz]).astype(int)
