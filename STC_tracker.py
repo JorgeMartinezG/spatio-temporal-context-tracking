@@ -47,10 +47,11 @@ if __name__ == '__main__':
     initstate = [161, 65, 75, 95]
 
     # Center target.
-    pos = np.array([initstate[1] + initstate[3]/2,
-                    initstate[0] + initstate[2]/2])
+    pos = np.array([initstate[1] + initstate[3]/2.,
+                    initstate[0] + initstate[2]/2.])
+
     # Initial target size.
-    target_sz = np.array([initstate[2], initstate[3]])
+    target_sz = np.array([initstate[3], initstate[2]])
     
     # Parameters according to the paper.
     padding = 1                               # Extra area.
@@ -63,10 +64,10 @@ if __name__ == '__main__':
     # Pre-computed confidence map.
     alapha = 2.25
 
-    rs, cs = sn.ndgrid(np.array(range(sz[0])) + 1 - sz[0]/2,
-                       np.array(range(sz[1])) + 1  - sz[1]/2)
+    rs, cs = sn.ndgrid(np.array(range(sz[0])) + 1 - sz[0]/2.,
+                       np.array(range(sz[1])) + 1  - sz[1]/2.)
 
-    dist = rs**2 + cs**2
+    dist = rs**2. + cs**2.
 
     conf = np.exp(-0.5 * np.sqrt(dist) / alapha)
 
@@ -110,8 +111,8 @@ if __name__ == '__main__':
             #calculate response of the confidence map at all locations
             confmap = np.fft.ifft2(Hstcf * np.fft.fft2(context_prior)).real
             # target location is at the maximum response
-            [row, ], [col, ] = np.where(confmap == confmap.max())
-            pos = pos - sz / 2 + [row, col]
+            [col, ], [row, ] = np.where(confmap == confmap.max())
+            pos = pos - sz / 2. + [col, row]
 
             context_prior = get_context(im, pos, sz, window)
             
@@ -142,12 +143,18 @@ if __name__ == '__main__':
         # Visualization.
         target_sz = target_sz * scale
 
-        rect_position = np.hstack([pos[[1, 0]] - target_sz/2,
-                                  target_sz]).astype(int)
 
-        init_point = tuple(rect_position[[0, 1]])
-        end_point = tuple([rect_position[0] + rect_position[2],
-                          rect_position[1] + rect_position[3]])
+        rect_position = np.hstack([pos[[1, 0]] - target_sz[[1, 0]]/2.,
+                                  target_sz[[1, 0]]])
+
+        print rect_position
+        print pos
+
+        import ipdb;ipdb.set_trace()
+
+        init_point = tuple(rect_position[[0, 1]].astype(int))
+        end_point = tuple([int(rect_position[0]) + int(rect_position[2]),
+                          int(rect_position[1]) + int(rect_position[3])])
         cv2.rectangle(img, init_point, end_point, (0, 255, 255), 2)
         cv2.imshow('image', img)
         key = cv2.waitKey(30)
