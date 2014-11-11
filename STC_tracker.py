@@ -8,8 +8,8 @@ from scitools import numpyutils  as sn
 
 def get_context(im, pos, sz, window):
     # Get and process context region.
-    xs = pos[1] + np.array(range(sz[1])) + 1 - (sz[1]/2)
-    ys = pos[0] + np.array(range(sz[0])) + 1 - (sz[0]/2)
+    xs = pos[1] + np.array(range(sz[1])) - (sz[1]/2)
+    ys = pos[0] + np.array(range(sz[0])) - (sz[0]/2)
 
     # Check for out-of-bounds coordinates, and set them to the values
     # at the borders.
@@ -55,8 +55,8 @@ if __name__ == '__main__':
     
     # Parameters according to the paper.
     padding = 1                               # Extra area.
-    rho = 0.075                                 # Learning parameter rho.
-    sz = target_sz * (1 + padding)             # Context region size.
+    rho = 0.075                               # Learning parameter rho.
+    sz = target_sz * (1 + padding)            # Context region size.
 
 
     # Parameters of scale update - scale ratio, lambda, average frames.
@@ -72,7 +72,7 @@ if __name__ == '__main__':
     conf = np.exp(-0.5 * np.sqrt(dist) / alapha)
 
     # normalization
-    conf =conf / conf.sum(axis=0).sum()
+    conf = conf / conf.sum(axis=0).sum()
 
     # frequency
     conff = np.fft.fft2(conf)
@@ -84,7 +84,6 @@ if __name__ == '__main__':
     # initial sigma for the weight function
     sigma = np.mean(target_sz)
 
-
     # use Hamming window to reduce frequency effect of image boundary
     window = hamming_window * np.exp(-0.5 * dist / sigma**2)
 
@@ -95,6 +94,7 @@ if __name__ == '__main__':
 
     # Loop reading frames
     for f, frame in enumerate(frames_list):
+
         sigma = sigma * scale
         window = hamming_window * np.exp(-0.5 * dist / sigma**2)
         window = window / window.sum(axis=0).sum()
@@ -111,8 +111,12 @@ if __name__ == '__main__':
             #calculate response of the confidence map at all locations
             confmap = np.fft.ifft2(Hstcf * np.fft.fft2(context_prior)).real
             # target location is at the maximum response
-            [col, ], [row, ] = np.where(confmap == confmap.max())
-            pos = pos - sz / 2. + [col, row]
+            [row, ], [col, ] = np.where(confmap == confmap.max())
+            # matlab and python think differently when it comes to 0-indexing or 1-indexing
+            row += 1
+            col += 1
+
+            pos = pos - sz / 2. + [row, col]
 
             context_prior = get_context(im, pos, sz, window)
             
@@ -120,11 +124,12 @@ if __name__ == '__main__':
             maxconf.append(conftmp.max())
 
             # update scale by Eq.(15)
-            if f % (num + 5) == 0:
+            if f > 1 and (f + 1) % (num + 2) == 0:
                 scale_curr = 0
 
                 for kk in range(num):
-                    scale_curr = scale_curr + np.sqrt(maxconf[f - kk - 1] / maxconf[f - kk - 2])
+                    confindex = f - kk
+                    scale_curr = scale_curr + np.sqrt(maxconf[confindex - 1] / maxconf[confindex - 2])
 
                 # update scale
                 scale = (1 - lambada) * scale + lambada * (scale_curr / num )
@@ -147,18 +152,15 @@ if __name__ == '__main__':
         rect_position = np.hstack([pos[[1, 0]] - target_sz[[1, 0]]/2.,
                                   target_sz[[1, 0]]])
 
-        print rect_position
-        print pos
-
-        import ipdb;ipdb.set_trace()
-
         init_point = tuple(rect_position[[0, 1]].astype(int))
         end_point = tuple([int(rect_position[0]) + int(rect_position[2]),
                           int(rect_position[1]) + int(rect_position[3])])
         cv2.rectangle(img, init_point, end_point, (0, 255, 255), 2)
         cv2.imshow('image', img)
         key = cv2.waitKey(30)
-    
+   
+        print 'Frame: %s Pos: %s' % (f+1, pos)
+ 
         if key & 0xFF == ord('q'):
             break
 
