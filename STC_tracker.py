@@ -166,9 +166,5 @@ if __name__ == '__main__':
         cv2.imshow('image', img)
         key = cv2.waitKey(30)
    
-        print 'Frame: %s Pos: %s' % (f+1, pos)
- 
         if key & 0xFF == ord('q'):
             break
-
-    print "Loop finished!"
