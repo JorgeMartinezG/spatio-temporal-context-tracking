@@ -35,7 +35,7 @@ def get_context(im, pos, sz, window):
     out = out - np.mean(out)
 
     if window.shape[0] != out.shape[0]:
-        print "Aborted processing of '%s' video because groundtruth window is bigger than image" %  sys.argv[2]
+        print "Aborted processing of '%s' video because groundtruth window is bigger than image" %  sys.argv[1]
 
     out = window * out
 
