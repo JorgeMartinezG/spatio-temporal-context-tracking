@@ -11,19 +11,21 @@ def get_context(im, pos, sz, window):
     xs = pos[1] + np.array(range(sz[1])) - (sz[1]/2)
     ys = pos[0] + np.array(range(sz[0])) - (sz[0]/2)
 
+    original_ys = ys
+
     # Check for out-of-bounds coordinates, and set them to the values
     # at the borders.
-    if xs[0] < 0:
-        xs = xs - xs[0]
+    if xs[0] <= 0:
+        xs = xs - xs[0] + 1
 
-    if ys[0] < 0:
-        ys = ys - ys[0]
+    if ys[0] <= 0:
+        ys = ys - ys[0] + 1
 
-    if ys[-1] > im.shape[0]:
-        ys = ys - ys[-1] + im.shape[0]
+    if ys[-1] >= im.shape[0]:
+        ys = ys - ys[-1] + im.shape[0] - 1
 
-    if xs[-1] > im.shape[1]:
-        xs = xs - xs[-1] + im.shape[1]
+    if xs[-1] >= im.shape[1]:
+        xs = xs - xs[-1] + im.shape[1] - 1
 
     slicey = slice(ys[0] ,ys[-1] + 1)
     slicex = slice(xs[0], xs[-1] + 1)
@@ -31,6 +33,10 @@ def get_context(im, pos, sz, window):
     # Extract image in context region.
     out = im[slicey, slicex].astype('d')
     out = out - np.mean(out)
+
+    if window.shape[0] != out.shape[0]:
+        print "Aborted processing of '%s' video because groundtruth window is bigger than image" %  sys.argv[2]
+
     out = window * out
 
     return out
@@ -108,6 +114,10 @@ if __name__ == '__main__':
         # Image read.
         img = cv2.imread(os.path.join(dataset_folder, video_name,
                                       'img', frame))
+
+        if img is None:
+            continue
+
         if img.shape[2] == 3:
             im = cv2.cvtColor(img, cv.CV_BGR2GRAY)
 
