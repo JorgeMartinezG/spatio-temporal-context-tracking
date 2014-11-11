@@ -43,8 +43,15 @@ if __name__ == '__main__':
     frames_list = os.listdir(os.path.join(dataset_folder, video_name, 'img'))
     frames_list.sort()
 
-    # Get initial rectangle [x, y, width, height].
-    initstate = [161, 65, 75, 95]
+    groundtruth_file = os.path.join(dataset_folder, video_name, 'groundtruth_rect.txt')
+
+    with open(groundtruth_file, 'r') as gt:
+        lines = gt.readlines()
+        gt_raw = lines[1].strip().split(',')
+        if len(gt_raw) == 1:
+            gt_raw = lines[1].strip().split('\t')
+
+    initstate = [int(x) for x in gt_raw]
 
     # Center target.
     pos = np.array([initstate[1] + initstate[3]/2.,
@@ -60,7 +67,7 @@ if __name__ == '__main__':
 
 
     # Parameters of scale update - scale ratio, lambda, average frames.
-    scale, lambada, num = 1, 0.25, 5
+    scale, lambada, num = 1, 0.55, 15
     # Pre-computed confidence map.
     alapha = 2.25
 
