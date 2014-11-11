@@ -136,7 +136,7 @@ if __name__ == '__main__':
             
         # Update the spatial context model h^{sc} in Eq.(9)
         context_prior = get_context(im, pos, sz, window)
-        hscf = conff / np.fft.fft2(context_prior)
+        hscf = conff / (np.fft.fft2(context_prior) + sys.float_info.epsilon)
 
         if f == 0:
             # First frame, initialize the spatio-temporal context model.
