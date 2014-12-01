@@ -172,9 +172,14 @@ if __name__ == '__main__':
         init_point = tuple(rect_position[[0, 1]].astype(int))
         end_point = tuple([int(rect_position[0]) + int(rect_position[2]),
                           int(rect_position[1]) + int(rect_position[3])])
+
         cv2.rectangle(img, init_point, end_point, (0, 255, 255), 2)
         cv2.imshow('image', img)
         key = cv2.waitKey(30)
-   
         if key & 0xFF == ord('q'):
             break
+
+        with open('results/' + video_name + ".txt", "a") as writer:
+            writer.write('%d,%d,%d,%d\n' % (rect_position[0], rect_position[1],
+                                            rect_position[2], rect_position[3]))
+   
